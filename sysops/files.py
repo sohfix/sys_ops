@@ -1,7 +1,6 @@
 import shutil
 from pathlib import Path
 
-
 class operations:
 
     @staticmethod
