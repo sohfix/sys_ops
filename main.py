@@ -1,3 +1,5 @@
+#! scripts/sysix_wrapper.sh
+
 #! /home/sohfix/programs/sysix/sys_ops/stream/bin/python3.11
 
 # Press the green button in the gutter to run the script.
