@@ -1,0 +1,299 @@
+#!/home/sohfix/programs/sysix/sys_ops/stream/bin/python3
+
+import argparse
+from managers import NoteManager, ToDoManager, HourTracker, CalendarManager, Formatter
+
+# Initialize managers and formatter
+note_manager = NoteManager()
+todo_manager = ToDoManager()
+hour_tracker = HourTracker()
+calendar_manager = CalendarManager()
+formatter = Formatter()
+
+def main():
+    parser = argparse.ArgumentParser(description="Keeper CLI Application - A robust assistant for managing notes, to-dos, hours, and calendar events.")
+
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Subparser for notes
+    note_parser = subparsers.add_parser("note", help="Manage notes")
+    note_parser.add_argument("--add", nargs=2, metavar=('name', 'content'), help="Add a new note with a name and content")
+    note_parser.add_argument("--update", type=str, help="Update a note by keyword")
+    note_parser.add_argument("--delete", type=str, help="Delete a note by ID")
+    note_parser.add_argument("--search", type=str, help="Search notes by keyword")
+    note_parser.add_argument("--list", action="store_true", help="List all notes")
+
+    # Subparser for to-dos
+    todo_parser = subparsers.add_parser("todo", help="Manage to-dos")
+    todo_parser.add_argument("--add", type=str, help="Add a new to-do")
+    todo_parser.add_argument("--deadline", type=str, help="Set a deadline for the to-do")
+    todo_parser.add_argument("--update", type=str, help="Update a to-do by keyword")
+    todo_parser.add_argument("--delete", type=str, help="Delete a to-do by ID")
+    todo_parser.add_argument("--search", type=str, help="Search to-dos by keyword")
+    todo_parser.add_argument("--list", action="store_true", help="List all to-dos")
+
+    # Subparser for hours
+    hours_parser = subparsers.add_parser("hours", help="Manage hours worked")
+    hours_parser.add_argument("--set", type=float, help="Set the total required service hours")
+    hours_parser.add_argument("--log", type=str, help="Log hours worked")
+    hours_parser.add_argument("--hours", type=float, help="Specify number of hours worked")
+    hours_parser.add_argument("--update", type=str, help="Update hours by ID")
+    hours_parser.add_argument("--delete", type=str, help="Delete hours by ID")
+    hours_parser.add_argument("--view", type=str, help="View hours logged for a job or date")
+    hours_parser.add_argument("--remaining", action="store_true", help="Show remaining service hours")
+
+    # Subparser for calendar
+    calendar_parser = subparsers.add_parser("calendar", help="Manage calendar appointments")
+    calendar_parser.add_argument("--add", type=str, help="Add a new appointment")
+    calendar_parser.add_argument("--date", type=str, help="Specify the date for the appointment")
+    calendar_parser.add_argument("--time", type=str, help="Specify the time for the appointment")
+    calendar_parser.add_argument("--description", type=str, help="Add a description for the appointment")
+    calendar_parser.add_argument("--update", type=str, help="Update an appointment by ID")
+    calendar_parser.add_argument("--delete", type=str, help="Delete an appointment by ID")
+    calendar_parser.add_argument("--view", type=str, help="View appointments by date")
+    calendar_parser.add_argument("--list", action="store_true", help="List all appointments")
+
+    args = parser.parse_args()
+
+    if args.command == "note":
+        if args.add:
+            try:
+                note_manager.add_note(args.add[0], args.add[1])
+            except Exception as e:
+                print(f"[red]Error adding note: {e}[/red]")
+        elif args.update:
+            try:
+                matches = note_manager.search_notes(args.update)
+                if matches:
+                    formatter.format_grid(
+                        [(i + 1, m[0], m[1], m[2]) for i, m in enumerate(matches)],
+                        ["Index", "ID", "Name", "Content"],
+                    )
+                    index = int(input("Select the note by index to update: ")) - 1
+                    new_name = input("Enter the new name for the note (optional): ")
+                    new_content = input("Enter the new content for the note (optional): ")
+                    note_manager.update_note(matches[index][0], new_name, new_content)
+                else:
+                    print("[red]No matches found.[/red]")
+            except Exception as e:
+                print(f"[red]Error updating note: {e}[/red]")
+        elif args.delete:
+            try:
+                note_manager.delete_note(args.delete)
+            except Exception as e:
+                print(f"[red]Error deleting note: {e}[/red]")
+        elif args.search:
+            try:
+                matches = note_manager.search_notes(args.search)
+                if matches:
+                    formatter.format_grid(
+                        [(m[0], m[1], m[2], m[3]) for m in matches],
+                        ["ID", "Name", "Content", "Timestamp"],
+                    )
+                else:
+                    print("[red]No matches found.[/red]")
+            except Exception as e:
+                print(f"[red]Error searching notes: {e}[/red]")
+        elif args.list:
+            try:
+                notes = note_manager.list_notes()
+                if notes:
+                    formatter.format_grid(
+                        [(m[0], m[1], m[2], m[3]) for m in notes],
+                        ["ID", "Name", "Content", "Timestamp"],
+                    )
+                else:
+                    print("[red]No notes found.[/red]")
+            except Exception as e:
+                print(f"[red]Error listing notes: {e}[/red]")
+
+    elif args.command == "todo":
+        if args.add:
+            try:
+                todo_manager.add_todo(args.add, args.deadline)
+            except Exception as e:
+                print(f"[red]Error adding to-do: {e}[/red]")
+        elif args.update:
+            try:
+                matches = todo_manager.search_todos(args.update)
+                if matches:
+                    formatter.format_grid(
+                        [
+                            (i + 1, m[0], m[1], m[2])
+                            for i, m in enumerate(matches)
+                        ],
+                        ["Index", "ID", "Content", "Deadline"],
+                    )
+                    index = int(input("Select the to-do by index to update: ")) - 1
+                    new_content = input("Enter the new content for the to-do: ")
+                    new_deadline = input("Enter the new deadline (optional): ")
+                    todo_manager.update_todo(matches[index][0], new_content, new_deadline)
+                else:
+                    print("[red]No matches found.[/red]")
+            except Exception as e:
+                print(f"[red]Error updating to-do: {e}[/red]")
+        elif args.delete:
+            try:
+                todo_manager.delete_todo(args.delete)
+            except Exception as e:
+                print(f"[red]Error deleting to-do: {e}[/red]")
+        elif args.search:
+            try:
+                matches = todo_manager.search_todos(args.search)
+                if matches:
+                    formatter.format_grid(
+                        [(m[0], m[1], m[2]) for m in matches],
+                        ["ID", "Content", "Deadline"],
+                    )
+                else:
+                    print("[red]No matches found.[/red]")
+            except Exception as e:
+                print(f"[red]Error searching to-dos: {e}[/red]")
+        elif args.list:
+            try:
+                todos = todo_manager.list_todos()
+                if todos:
+                    formatter.format_grid(
+                        [(m[0], m[1], m[2], m[3]) for m in todos],
+                        ["ID", "Content", "Deadline", "Timestamp"],
+                    )
+                else:
+                    print("[red]No to-dos found.[/red]")
+            except Exception as e:
+                print(f"[red]Error listing to-dos: {e}[/red]")
+
+    elif args.command == "hours":
+        if args.set:
+            try:
+                hour_tracker.set_total_hours(args.set)
+            except Exception as e:
+                print(f"[red]Error setting total service hours: {e}[/red]")
+        elif args.log:
+            try:
+                hour_tracker.log_hours(args.log, args.hours)
+            except Exception as e:
+                print(f"[red]Error logging hours: {e}[/red]")
+        elif args.update:
+            try:
+                matches = hour_tracker.view_hours()
+                if matches:
+                    formatter.format_grid(
+                        [
+                            (
+                                i + 1,
+                                m[0],
+                                m[1],
+                                m[2],
+                                m[3],
+                            )
+                            for i, m in enumerate(matches)
+                        ],
+                        ["Index", "ID", "Job Name", "Hours Worked", "Date"],
+                    )
+                    index = int(input("Select the entry by index to update: ")) - 1
+                    new_hours = float(input("Enter the new hours worked: "))
+                    new_date = input("Enter the new date (optional): ")
+                    hour_tracker.update_hours(matches[index][0], new_hours, new_date)
+                else:
+                    print("[red]No matches found.[/red]")
+            except Exception as e:
+                print(f"[red]Error updating hours: {e}[/red]")
+        elif args.delete:
+            try:
+                hour_tracker.delete_hours(args.delete)
+            except Exception as e:
+                print(f"[red]Error deleting hours: {e}[/red]")
+        elif args.view:
+            try:
+                matches = hour_tracker.view_hours(args.view)
+                if matches:
+                    formatter.format_grid(
+                        [
+                            (m[0], m[1], m[2], m[3])
+                            for m in matches
+                        ],
+                        ["ID", "Job Name", "Hours Worked", "Date"],
+                    )
+                else:
+                    print("[red]No matches found.[/red]")
+            except Exception as e:
+                print(f"[red]Error viewing hours: {e}[/red]")
+        elif args.remaining:
+            try:
+                hour_tracker.show_remaining_hours()
+            except Exception as e:
+                print(f"[red]Error showing remaining hours: {e}[/red]")
+
+    elif args.command == "calendar":
+        if args.add:
+            try:
+                calendar_manager.add_appointment(
+                    args.add, args.date, args.time, args.description
+                )
+            except Exception as e:
+                print(f"[red]Error adding appointment: {e}[/red]")
+        elif args.update:
+            try:
+                matches = calendar_manager.view_appointments()
+                if matches:
+                    formatter.format_grid(
+                        [
+                            (
+                                i + 1,
+                                m[0],
+                                m[1],
+                                m[2],
+                                m[3],
+                                m[4],
+                            )
+                            for i, m in enumerate(matches)
+                        ],
+                        ["Index", "ID", "Title", "Date", "Time", "Description"],
+                    )
+                    index = int(input("Select the appointment by index to update: ")) - 1
+                    new_title = input("Enter the new title: ")
+                    new_date = input("Enter the new date: ")
+                    new_time = input("Enter the new time: ")
+                    new_description = input("Enter the new description: ")
+                    calendar_manager.update_appointment(
+                        matches[index][0], new_title, new_date, new_time, new_description
+                    )
+                else:
+                    print("[red]No matches found.[/red]")
+            except Exception as e:
+                print(f"[red]Error updating appointment: {e}[/red]")
+        elif args.delete:
+            try:
+                calendar_manager.delete_appointment(args.delete)
+            except Exception as e:
+                print(f"[red]Error deleting appointment: {e}[/red]")
+        elif args.view:
+            try:
+                matches = calendar_manager.view_appointments(args.view)
+                if matches:
+                    formatter.format_grid(
+                        [
+                            (m[0], m[1], m[2], m[3], m[4])
+                            for m in matches
+                        ],
+                        ["ID", "Title", "Date", "Time", "Description"],
+                    )
+                else:
+                    print("[red]No matches found.[/red]")
+            except Exception as e:
+                print(f"[red]Error viewing appointments: {e}[/red]")
+        elif args.list:
+            try:
+                appointments = calendar_manager.list_appointments()
+                if appointments:
+                    formatter.format_grid(
+                        [(m[0], m[1], m[2], m[3], m[4]) for m in appointments],
+                        ["ID", "Title", "Date", "Time", "Description"],
+                    )
+                else:
+                    print("[red]No appointments found.[/red]")
+            except Exception as e:
+                print(f"[red]Error listing appointments: {e}[/red]")
+
+if __name__ == "__main__":
+    main()
