@@ -28,6 +28,13 @@ class DatabaseManager:
                                 deadline TEXT,
                                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                             )''')
+            conn.execute('''CREATE TABLE IF NOT EXISTS completed_todos (
+                                id TEXT PRIMARY KEY,
+                                content TEXT NOT NULL,
+                                deadline TEXT,
+                                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                completed_at DATETIME NOT NULL
+                            )''')
             conn.execute('''CREATE TABLE IF NOT EXISTS hours (
                                 id TEXT PRIMARY KEY,
                                 job_name TEXT NOT NULL,
@@ -59,7 +66,7 @@ class HourTracker(DatabaseManager):
 
     def log_hours(self, job_name, hours_worked, date=None):
         hour_id = str(uuid.uuid4())
-        date = date or datetime.now().strftime("%Y-%m-%d")
+        date = date or datetime.now().strftime("%m/%d/%Y")
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("INSERT INTO hours (id, job_name, hours_worked, date) VALUES (?, ?, ?, ?)",
                          (hour_id, job_name, hours_worked, date))
@@ -93,7 +100,7 @@ class NoteManager(DatabaseManager):
 
     def add_note(self, name, content):
         note_id = str(uuid.uuid4())
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("INSERT INTO notes (id, name, content, timestamp) VALUES (?, ?, ?, ?)",
                          (note_id, name, content, timestamp))
@@ -142,7 +149,7 @@ class ToDoManager(DatabaseManager):
 
     def add_todo(self, content, deadline=None):
         todo_id = str(uuid.uuid4())
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("INSERT INTO todos (id, content, deadline, timestamp) VALUES (?, ?, ?, ?)",
                          (todo_id, content, deadline, timestamp))
@@ -171,6 +178,23 @@ class ToDoManager(DatabaseManager):
             conn.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
         print(f"[green]To-Do ID {todo_id} deleted successfully.[/green]")
 
+    def mark_completed(self, todo_id):
+        with sqlite3.connect(self.db_path) as conn:
+            # Move the to-do item to the completed_todos table
+            todo = conn.execute("SELECT id, content, deadline, timestamp FROM todos WHERE id = ?", (todo_id,)).fetchone()
+            if todo:
+                conn.execute("INSERT INTO completed_todos (id, content, deadline, timestamp, completed_at) VALUES (?, ?, ?, ?, ?)",
+                             (todo[0], todo[1], todo[2], todo[3], datetime.now().strftime("%m/%d/%Y %H:%M:%S")))
+                conn.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
+                print(f"[green]To-Do ID {todo_id} marked as completed.[/green]")
+            else:
+                print(f"[red]To-Do ID {todo_id} not found.[/red]")
+
+    def list_completed_todos(self):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("SELECT id, content, deadline, timestamp, completed_at FROM completed_todos")
+            return cursor.fetchall()
+
     def pretty_print_todos(self, todos):
         console = Console()
         table = Table(show_header=True, header_style="bold magenta")
@@ -181,6 +205,20 @@ class ToDoManager(DatabaseManager):
 
         for todo in todos:
             table.add_row(todo[0], todo[1], todo[2] or "No deadline", todo[3])
+
+        console.print(table)
+
+    def pretty_print_completed_todos(self, todos):
+        console = Console()
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("ID", style="dim", width=12)
+        table.add_column("Content", width=50)
+        table.add_column("Deadline", width=20)
+        table.add_column("Created At", width=20)
+        table.add_column("Completed At", width=20)
+
+        for todo in todos:
+            table.add_row(todo[0], todo[1], todo[2] or "No deadline", todo[3], todo[4])
 
         console.print(table)
 
