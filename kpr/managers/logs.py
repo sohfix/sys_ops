@@ -2,8 +2,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 class Logger:
-    def __init__(self, log_file='app.log', log_level=logging.DEBUG, max_bytes=1024*1024, backup_count=3):
-        self.logger = logging.getLogger('AppLogger')
+    def __init__(self, log_file='/home/sohfix/logs', log_level=logging.DEBUG, max_bytes=1024*1024, backup_count=3):
+        self.logger = logging.getLogger('KPR Logger')
         self.logger.setLevel(log_level)
 
         # Create a rotating file handler
